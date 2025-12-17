@@ -32,40 +32,53 @@ console.log("🔥 Webhook HIT - request received");
 
         const { data, type } = parsedBody;
 
-        const userData = {
-            clerkId: data.id,
-            email: data.email_addresses[0].email_address,
-            userName: `${data.first_name} ${data.last_name}`,
-            image: data.image_url,
-        };
-
-        // Switch sur le type d'événement
+        // Gestion des événements selon le type
         switch (type) {
-            case "user.created":
+            case "user.created": {
+                const userData = {
+                    clerkId: data.id,
+                    email: data.email_addresses?.[0]?.email_address || "",
+                    userName: `${data.first_name || ""} ${data.last_name || ""}`.trim(),
+                    image: data.image_url || "",
+                };
                 await User.create(userData);
                 console.log(`✅ User created: ${userData.userName}`);
                 break;
+            }
 
-            case "user.updated":
+            case "user.updated": {
+                const userData = {
+                    clerkId: data.id,
+                    email: data.email_addresses?.[0]?.email_address || "",
+                    userName: `${data.first_name || ""} ${data.last_name || ""}`.trim(),
+                    image: data.image_url || "",
+                };
                 await User.findOneAndUpdate({ clerkId: data.id }, userData);
                 console.log(`✏️ User updated: ${userData.userName}`);
                 break;
+            }
 
-            case "user.deleted":
-                await User.findOneAndDelete({ clerkId: data.id });
-                console.log(`🗑️ User deleted: ${userData.userName}`);
+            case "user.deleted": {
+                // Pas besoin de récupérer email/nom, juste l'ID suffit
+                const deletedUser = await User.findOneAndDelete({ clerkId: data.id });
+                if (deletedUser) {
+                    console.log(`🗑️ User deleted: ${deletedUser.userName}`);
+                } else {
+                    console.log(`🗑️ User with ID ${data.id} not found in DB`);
+                }
                 break;
+            }
 
             default:
                 console.log(`ℹ️ Event type not handled: ${type}`);
                 break;
         }
 
-        res.json({ success: true, message: "Webhook Received" });
+        res.json({ success: true, message: "Webhook processed successfully" });
 
     } catch (error) {
         console.error("❌ Webhook error:", error.message);
-        res.json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
